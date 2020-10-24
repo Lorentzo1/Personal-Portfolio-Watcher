@@ -1,0 +1,76 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
+
+namespace AwsomeApplicationUI
+{
+    // Class for complex work witj stock Data
+    public class StockData
+    {
+        public string Ticker;
+        public double BuyingPrice;
+        public int Amount;
+        public DateTime PurchesDate;
+        public DateTime TimeofupcommingDividend;
+        public double Dividends;
+        public double Currentprice;
+        public string Market;
+        
+        // An empty constructor used in code
+        public StockData()
+        {
+
+        }
+        
+        // Constructor for full class used before saveing data
+        public StockData(string ticker, double buyingprice, int amount, DateTime purchasedate, double dividents, string market)
+        {
+            Ticker = ticker;
+            BuyingPrice = buyingprice;
+            Amount = amount;
+            PurchesDate = purchasedate;
+            Dividends = dividents;
+            Market = market;
+        }
+        // Method for saving data
+        public void SavingStockData(List<StockData> stocklist)
+        {
+            string date = JsonConvert.SerializeObject(stocklist);
+            File.WriteAllText(DataManager.ActiveUser + "stockinfo.save", date);
+        }
+        // Method for loading data
+        public void LoadingStockData()
+        {
+            if (File.Exists(DataManager.ActiveUser + "stockinfo.save"))
+            {
+                string data = File.ReadAllText(DataManager.ActiveUser + "stockinfo.save");
+                DataManager.StockList = JsonConvert.DeserializeObject<List<StockData>>(data);
+            }
+        }
+        // Method used to make Json requests for every stock in database then being used to download data
+        public void AddingRequest(string ticker, string market)
+        {
+            string requestpath = @"C:\Users\Lorentzo\Documents\Visual Studio 2017\Projects\AwsomeApplication\AwsomeApplicationUI\AwsomeApplicationUI\bin\Debug\datarequests\";
+            FileStream FS = File.Create(requestpath + ticker + ".txt");
+            {
+
+                string s = "\"";
+                string requestdata = "{" + s + "symbols" + s + ":{" + s + "tickers" + s + ":[" + s + market + ":" + ticker + s + "]," + s + "query" + s + ":{" + s + "types" + s + ":[]} }," + s + "columns" + s + ":[" + s + "close" + s + "]}";
+                byte[] text = new UTF8Encoding(true).GetBytes(requestdata);
+                FS.Write(text, 0, text.Length);
+
+            }
+        }
+        // Method for deleting request when Stock in database is being edited
+        public void EditofRequest(string ticker, Form1 form)
+        {
+            string requestpath = @"C:\Users\Lorentzo\Documents\Visual Studio 2017\Projects\AwsomeApplication\AwsomeApplicationUI\AwsomeApplicationUI\bin\Debug\datarequests\";
+            while (form.FileReading) { } //wait for file read to end
+            File.Delete(requestpath + ticker + ".txt");
+        }
+    }
+}
