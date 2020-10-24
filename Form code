@@ -348,7 +348,7 @@ namespace AwsomeApplicationUI
         public void UpdateStockData(int tickerIndex)
         {
            
-            string adress = "https://scanner.tradingview.com/america/scan";
+            string adress = "https://*******************";
             using(WebClient wc = new WebClient())
             {
                 try
