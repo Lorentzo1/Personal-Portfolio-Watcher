@@ -1,0 +1,539 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.IO;
+using System.Net;
+using System.Runtime.Serialization;
+using Newtonsoft.Json.Serialization;
+using System.Runtime.Serialization.Json;
+using System.Drawing.Text;
+using AwsomeApplicationUI.Classes;
+
+namespace AwsomeApplicationUI
+{
+    public partial class Form1 : Form
+    {
+        public bool UpdateStocks = false;
+        Thread StockDataUpdateThread;
+
+        public bool FileSaving;
+        public bool FileReading;
+        public Form1()
+        {
+            FileSaving = false;
+            FileReading = false;
+
+            InitializeComponent();
+            
+            // Loading of all saved data
+            Methods.JsonLoad();
+            Methods.JsonYearPriceLoad();
+
+            
+            // Start and initialization of multithred operation
+            StockDataUpdateThread = new Thread(() =>
+            {
+                UpdateStocks = true;
+                while (UpdateStocks)
+                {
+                    for (int i = 0; i < DataManager.StockList.Count; i++)
+                        UpdateStockData(i);
+                    Thread.Sleep(500);
+                }
+            })
+            { IsBackground = true, Name = "StonksThread", Priority = ThreadPriority.BelowNormal };
+            StockDataUpdateThread.Start();
+            
+            FirstUI();
+        }
+        
+        
+        public void FirstUI()
+        {
+        
+        // First view
+        
+            panelLogin.BackColor = Color.Beige;
+            panelAllways.BackColor = Color.BurlyWood;
+            panelNotepad.BackColor = Color.Bisque;
+            panelNotepad.Visible = false;
+            buttonEnterNotepad.Visible = false;
+            buttonBack.Visible = false;
+            AcceptButton = buttonLogin;
+            panelStocks.Visible = false;
+            buttonEnterStocks.Visible = false;
+            panelTime.Visible = false;
+            buttonTime.Visible = false;
+
+            panelStocks.Location = panelLogin.Location;
+            panelNotepad.Location = panelLogin.Location;
+            panelTime.Location = panelLogin.Location;
+            dataStockGrid.AllowUserToAddRows = false;
+        }
+        public void ExitButtonUI()
+        {
+            panelNotepad.Visible = false;
+            panelLogin.Visible = false;
+            panelStocks.Visible = false;
+            panelAddingStock.Visible = false;
+            panelTime.Visible = false;
+        }
+        public void MainUI()
+        {
+            panelLogin.Visible = false;
+            buttonEnterNotepad.Visible = true;
+            buttonBack.Visible = true;
+            buttonEnterStocks.Visible = true;
+            panelStocks.Visible = false;
+            buttonTime.Visible = true;
+        }
+        public void NotepadUI()
+        {
+            buttonNotepadEdit.Visible = false; ;
+            panelAddingStock.Visible = false;
+            panelNotepad.Visible = true;
+            panelStocks.Visible = false;
+            panelTime.Visible = false;
+
+        }
+        // option to create new account
+        public void buttonRegister_Click(object sender, EventArgs e)
+        {        
+            User<string, string, string> NewUser = new User<string, string, string>(textBoxUsername.Text, textBoxPassword.Text, DateTime.Now.ToString());
+            //JsonSave(NewUser);
+            if (NewUser.username != "" && NewUser.password != "")
+            {
+                DataManager.UserList = new List<User<string, string, string>>();
+                DataManager.UserList.Add(NewUser);
+                Methods.JsonSave();
+                textBoxUsername.Clear();
+                textBoxPassword.Clear();
+            }
+            else { Console.WriteLine("not ok"); }
+
+        }
+        // Login for registered users
+        private void buttonLogin_Click(object sender, EventArgs e)
+        {
+            for (int i = 0; i < DataManager.UserList.Count; i++)
+            {
+                if (textBoxUsername.Text == DataManager.UserList[i].username)
+                {
+                    if (textBoxPassword.Text == DataManager.UserList[i].password)
+                    {
+                        MainUI();
+                        DataManager.UserList[i].lastlogin = DateTime.Now.ToString();
+                        DataManager.ActiveUser = i;
+                    }
+                }
+            }
+
+
+        }
+
+        private void buttonEnterNotepad_Click(object sender, EventArgs e)
+        {
+            NotepadUI();
+            if (DataManager.EnteredText2 == null)
+                DataManager.EnteredText2 = new DailyNote();
+            DataManager.EnteredText2.LoadingText();
+            Drawingoldnotes();
+
+
+        }
+
+        private void buttonExit_Click(object sender, EventArgs e)
+        {
+            ExitButtonUI();
+        }
+
+        private void buttonNotepadSave_Click(object sender, EventArgs e)
+        {
+            string newtext = textBoxNotepedNew.Text;
+            string datenow = DateTime.Now.ToString();
+            DataManager.EnteredText2 = new DailyNote(newtext, datenow, null);
+
+
+            DataManager.LoadedText.Add(DataManager.EnteredText2);
+            DataManager.EnteredText2.Save();
+            DataManager.EnteredText2.LoadingText();
+
+        }
+
+
+        public int notepadnum = 0;
+        public int notepadnum2 = 1;
+        public int notepadnum3 = 2;
+        private void buttonNotepadPrewious_Click(object sender, EventArgs e)
+        {
+            notepadnum--;
+            notepadnum2--;
+            notepadnum3--; ;
+            if (notepadnum < 0)
+            {
+                notepadnum = 0;
+                notepadnum2 = 1;
+                notepadnum3 = 2;
+            }
+            Drawingoldnotes();
+        }
+
+        private void buttonNotepadNext_Click(object sender, EventArgs e)
+        {
+            notepadnum++;
+            notepadnum2 = notepadnum + 1;
+            notepadnum3 = notepadnum + 2;
+            if (notepadnum3 > DataManager.LoadedText.Count - 1)
+            {
+                notepadnum = DataManager.LoadedText.Count - 3;
+                notepadnum2 = DataManager.LoadedText.Count - 2;
+                notepadnum3 = DataManager.LoadedText.Count - 1;
+            }
+            Drawingoldnotes();
+        }
+        public void Drawingoldnotes()
+        {
+            string oldest = DataManager.LoadedText[notepadnum].Date;
+            char[] fewlines = DataManager.LoadedText[notepadnum].Text.ToCharArray(0, 5);
+            string fewlinesstring = new string(fewlines);
+            richTextBoxNotepadOldest.Text = oldest + " " + "-" + fewlinesstring;
+            if (DataManager.LoadedText.Count > 1)
+            {
+                string oldest2 = DataManager.LoadedText[notepadnum2].Date;
+                char[] fewlines2 = DataManager.LoadedText[notepadnum2].Text.ToCharArray(0, 5);
+                string fewlinesstring2 = new string(fewlines2);
+                richTextBoxNotepadOlder.Text = oldest2 + " " + "-" + fewlinesstring2;
+            }
+
+            if (DataManager.LoadedText.Count > 2)
+            {
+                string oldest3 = DataManager.LoadedText[notepadnum3].Date;
+                char[] fewlines3 = DataManager.LoadedText[notepadnum3].Text.ToCharArray(0, 5);
+                string fewlinesstring3 = new string(fewlines3);
+                richTextBoxNotepadOld.Text = oldest3 + " " + "-" + fewlinesstring3;
+
+            }
+
+        }
+        public DailyNote currentnote;
+        private void richTextBoxNotepadOldest_Click(object sender, EventArgs e)
+        {
+            currentnote = DataManager.LoadedText[notepadnum];
+            textBoxNotepedNew.Clear();
+            textBoxNotepedNew.Text = currentnote.Text;
+            buttonNotepadEdit.Visible = true;
+            ShowingEdits(currentnote, textBoxNotepedNew);
+        }
+
+        private void richTextBoxNotepadOlder_Click(object sender, EventArgs e)
+        {
+            currentnote = DataManager.LoadedText[notepadnum2];
+            textBoxNotepedNew.Clear();
+            textBoxNotepedNew.Text = currentnote.Text;
+            buttonNotepadEdit.Visible = true;
+            ShowingEdits(currentnote, textBoxNotepedNew);
+        }
+
+        private void richTextBoxNotepadOld_Click(object sender, EventArgs e)
+        {
+            currentnote = DataManager.LoadedText[notepadnum3];
+            textBoxNotepedNew.Clear();
+            textBoxNotepedNew.Text = currentnote.Text;
+            buttonNotepadEdit.Visible = true;
+            ShowingEdits(currentnote, textBoxNotepedNew);
+
+        }
+
+        private void buttonNotepadEdit_Click(object sender, EventArgs e)
+        {
+            EditingNote(currentnote);
+        }
+        public void EditingNote(DailyNote note)
+        {
+            string newedit = textBoxNotepedNew.Text;
+            note.Edit = note.Edit + ";" + newedit;
+            Methods.SavingEdits(note);
+        }
+
+        private void ShowingEdits(DailyNote edit, TextBox window)
+        {
+            if (edit.Edit != null)
+            {
+                string[] edittext = edit.Edit.Split(';');
+                for (int i = 0; i < edittext.Length; i++)
+                {
+                    window.AppendText("  " + Environment.NewLine + "edit" + (i + 1) + " " + edittext[i]);
+                }
+            }
+
+        }
+
+        public void buttonEnterStocks_Click(object sender, EventArgs e)
+        {
+            StockPanelUI();
+            panelTime.Visible = false;
+            panelNotepad.Visible = false;
+            DataManager.NewStockData.LoadingStockData();
+            DrawingData(DataManager.StockList);
+
+
+        }
+        // stock manager main UI
+        public void StockPanelUI()
+        {
+            panelNotepad.Visible = false;
+            panelAddingStock.Visible = false;
+            panelStocks.Visible = true;
+            panelStockDetail.Visible = false;
+
+
+        }
+
+        private void buttonAddStock_Click(object sender, EventArgs e)
+        {
+            panelAddingStock.Visible = true;
+            buttonDeleteStock.Visible = false;
+            buttonEditStock.Visible = false;
+
+        }
+
+        private void buttonAddingStockExit_Click(object sender, EventArgs e)
+        {
+            panelAddingStock.Visible = false;
+            buttonDeleteStock.Visible = true;
+            buttonEditStock.Visible = true;
+
+        }
+        // option to add new stock into application
+        private void buttonAddnewStock_Click(object sender, EventArgs e)
+        {
+            bool num1ok = double.TryParse(textStockPriceBuy.Text, out double num1);
+            bool num2ok = double.TryParse(textBoxDividendsRecieved.Text, out double num2);
+            
+            if (num1ok && num2ok)
+            {
+                DataManager.NewStockData = new StockData(textBoxStockTicker.Text, num1, (int)numericAmount.Value, dateTimePickerPurches.Value, num2, comboBoxMarkets.SelectedItem.ToString());
+                string ok = textBoxStockTicker.Text;
+                if (DataManager.StockList.Any(x => x.Ticker == DataManager.NewStockData.Ticker))
+                {
+                    Console.WriteLine("Stock data with duplicate ticker exists");
+                    return;
+                }
+                DataManager.NewStockData.AddingRequest(DataManager.NewStockData.Ticker, DataManager.NewStockData.Market);
+                DataManager.StockList.Add(DataManager.NewStockData);
+                { MessageBox.Show("Stock added", "Message"); }
+                DataManager.NewStockData.SavingStockData(DataManager.StockList);
+                dataStockGrid.Rows.Add();
+                DrawingData(DataManager.StockList);
+                YearPrice yr = new YearPrice(textBoxStockTicker.Text, new List<int> { 0 });
+                DataManager.YearPriceList.Add(yr);
+                Methods.JsonYearPrice(DataManager.YearPriceList);
+
+
+            }
+            else { MessageBox.Show("some data are in inccorent format", "Error"); }
+        }
+        
+        // option to acces edit window
+        private void buttonEditStock_Click(object sender, EventArgs e)
+        {
+            panelStockDetail.Visible = true;
+            panelStockDetail.BringToFront();
+            panelStockDetail.Show();
+
+            var position = dataStockGrid.SelectedCells[0].RowIndex;
+            var ticker = dataStockGrid[0, position].Value.ToString();
+            for (indexofselectedstock = 0; indexofselectedstock < DataManager.StockList.Count; indexofselectedstock++)
+            {
+                if (ticker == DataManager.StockList[indexofselectedstock].Ticker)
+                {
+                    panelStockDetail.Visible = true;
+                    textBoxDetailTicker.Text = DataManager.StockList[indexofselectedstock].Ticker;
+                    textBoxDetailAmount.Text = DataManager.StockList[indexofselectedstock].Amount.ToString();
+                    textBoxDetailDividend.Text = DataManager.StockList[indexofselectedstock].Dividends.ToString();
+                    //dodat hodnoty pres multy thread
+                    //
+                    textBoxDetailPurchaseDate.Text = DataManager.StockList[indexofselectedstock].PurchesDate.ToString("dd/MM/yy");
+                    textBoxDetailPurchasePrice.Text = DataManager.StockList[indexofselectedstock].BuyingPrice.ToString();
+                    comboBoxDetailMarkets.SelectedItem = DataManager.StockList[indexofselectedstock].Market.ToString();
+                    break;
+                }
+            }
+            panelStockDetail.Focus();
+
+
+
+        }
+        // option to delete data
+        private void buttonDeleteStock_Click(object sender, EventArgs e)
+        {
+            if (dataStockGrid.CurrentRow.Selected)
+            {
+                var x = dataStockGrid.SelectedRows[0].Index;
+                var xx = dataStockGrid[0, x].Value.ToString();
+                Console.WriteLine(xx);
+                int indexofdelete = 0;
+                for (int i = 0; i < DataManager.StockList.Count; i++)
+                {
+                    if (DataManager.StockList[i].Ticker == xx)
+                    {
+                        indexofdelete = i;
+                        DataManager.NewStockData.EditofRequest(DataManager.StockList[i].Ticker, this);
+                        DataManager.StockList.RemoveAt(i);
+                        DataManager.NewStockData = new StockData();
+                        DataManager.NewStockData.SavingStockData(DataManager.StockList);
+                        DrawingData(DataManager.StockList);
+                    }
+                }
+
+            }
+        }
+        // datagrid draw
+        public void DrawingData(List<StockData> list)
+        {
+            dataStockGrid.Rows.Clear();
+            for (int i = 0; i < DataManager.StockList.Count; i++)
+            {
+                dataStockGrid.Rows.Add(list[i].Ticker, list[i].Amount, list[i].BuyingPrice, list[i].Dividends, list[i].Currentprice*list[i].Amount);
+            }
+        }
+
+        private void buttonDetailExit_Click(object sender, EventArgs e)
+        {
+            panelStockDetail.Visible = false;
+        }
+        
+        // button to save new data and rewrite the old one 
+        private void buttonSaveChanges_Click(object sender, EventArgs e)
+        {
+            DataManager.NewStockData.EditofRequest(DataManager.StockList[indexofselectedstock].Ticker, this);
+            DataManager.StockList[indexofselectedstock].Ticker = DataManager.StockList[indexofselectedstock].Ticker.Replace(DataManager.StockList[indexofselectedstock].Ticker, textBoxDetailTicker.Text);
+            bool amountok = Int32.TryParse(textBoxDetailAmount.Text, out int amount);
+            DataManager.StockList[indexofselectedstock].Amount = amount;
+            bool dividendok = double.TryParse(textBoxDetailDividend.Text, out double div);
+            DataManager.StockList[indexofselectedstock].Dividends = div;
+            bool PDok = DateTime.TryParse(textBoxDetailPurchaseDate.Text, out DateTime date);
+            DataManager.StockList[indexofselectedstock].PurchesDate = date;
+            bool BPok = double.TryParse(textBoxDetailPurchasePrice.Text, out double price);
+            DataManager.StockList[indexofselectedstock].BuyingPrice = price;
+            DataManager.StockList[indexofselectedstock].Market = comboBoxDetailMarkets.SelectedItem.ToString();
+            
+            if (amountok && dividendok && PDok && BPok  /*DataManager.StockList.Any(x => x.Ticker != DataManager.StockList[indexofselectedstock].Ticker*/)
+            {
+                DataManager.NewStockData = new StockData();
+                while(FileReading) { } //we wait for other threads to finish reading files before editing them
+                FileSaving = true;
+                DataManager.NewStockData.SavingStockData(DataManager.StockList);
+                FileSaving = false;
+                MessageBox.Show("stock data succesfully edited", "note");
+                DataManager.NewStockData.AddingRequest(textBoxDetailTicker.Text, comboBoxDetailMarkets.SelectedItem.ToString());
+                DrawingData(DataManager.StockList);
+                YearPrice yr = new YearPrice(textBoxStockTicker.Text, new List<int> {0});
+                DataManager.YearPriceList.Add(yr);
+                Methods.JsonYearPrice(DataManager.YearPriceList);
+            }
+            else { MessageBox.Show("some of the data are invalid", "Error"); }
+                                                
+
+        }
+        // Important value for managing UI and data manipulation
+        public int indexofselectedstock;
+
+        private void dataStockGrid_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
+        {
+            panelStockDetail.Visible = true;
+            panelStockDetail.BringToFront();
+            var position = dataStockGrid.SelectedCells[0].RowIndex;
+            var ticker = dataStockGrid[0, position].Value.ToString();
+            for (indexofselectedstock = 0; indexofselectedstock < DataManager.StockList.Count; indexofselectedstock++)
+            {
+                if (ticker == DataManager.StockList[indexofselectedstock].Ticker)
+                {
+                    panelStockDetail.Visible = true;
+                    textBoxDetailTicker.Text = DataManager.StockList[indexofselectedstock].Ticker;
+                    textBoxDetailAmount.Text = DataManager.StockList[indexofselectedstock].Amount.ToString();
+                    textBoxDetailDividend.Text = DataManager.StockList[indexofselectedstock].Dividends.ToString();
+                    textBoxDetailPurchaseDate.Text = DataManager.StockList[indexofselectedstock].PurchesDate.ToString("dd/MM/yy");
+                    textBoxDetailPurchasePrice.Text = DataManager.StockList[indexofselectedstock].BuyingPrice.ToString();
+                    comboBoxDetailMarkets.SelectedItem = DataManager.StockList[indexofselectedstock].Market.ToString();
+                    break;
+                }
+            }
+        }
+
+        private void buttonTime_Click(object sender, EventArgs e)
+        {
+            panelTime.Visible = true;
+            panelStocks.Visible = false;
+            panelNotepad.Visible = false;
+            labelTime1.Text = DateTime.Now.ToShortTimeString();
+            labelTime2.Text = DateTime.Now.AddHours(1).ToShortTimeString();
+            labelTime3.Text = DateTime.Now.AddHours(-6).ToShortTimeString();
+            labelTime4.Text = DateTime.Now.Date.ToShortDateString();
+        }
+
+        private void buttonTimeExit_Click(object sender, EventArgs e)
+        {
+            panelTime.Visible = false;
+        }
+
+
+        // A Multithread operation opperation to update data, current price and yearly price
+        public void UpdateStockData(int tickerIndex)
+        {
+           
+            string adress = "https://scanner.tradingview.com/america/scan";
+            using(WebClient wc = new WebClient())
+            {
+                try
+                {
+                    string shortenedRequestPath = @"C:\Users\Lorentzo\Documents\Visual Studio 2017\Projects\AwsomeApplication\AwsomeApplicationUI\AwsomeApplicationUI\bin\Debug\datarequests\" + DataManager.StockList[tickerIndex].Ticker.ToUpper() + ".txt";
+                    while (FileSaving) { } //we wait
+                    FileReading = true;
+                    string data = File.ReadAllText(shortenedRequestPath);
+                    FileReading = false;
+
+                    string upload = wc.UploadString(adress, data);
+
+                    int parse = Methods.Gettingdigits(upload);
+
+                    DataManager.StockList[tickerIndex].Currentprice = parse;
+                    DataManager.NewStockData.SavingStockData(DataManager.StockList);
+                    DataManager.YearPriceList[tickerIndex].YearPricelist.Add(parse);
+                    Methods.JsonYearPrice(DataManager.YearPriceList);
+                    
+                    // Method prepared for real time update of data if needed
+                    this.Invoke(new Action(() =>
+                    {
+                        //all ui changes across threads HERE
+
+                        
+                    }));
+
+                }
+
+                catch (Exception)
+                {
+
+                    MessageBox.Show("data not dowloaded", "check data format");
+                }
+            }
+
+
+
+        }
+    }
+}
+
+
+
+
+
