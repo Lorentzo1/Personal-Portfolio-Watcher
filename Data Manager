@@ -1,0 +1,34 @@
+using AwsomeApplicationUI.Classes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AwsomeApplicationUI
+{
+    public static class DataManager
+    {
+        public static int ActiveUser { get; set; }
+
+        public static List<DailyNote> LoadedText = new List<DailyNote>();
+
+        public static List<StockData> StockList = new List<StockData>();
+
+        public static List<User<string, string, string>> UserList = new List<User<string, string, string>>();
+
+        public static DailyNote EnteredText2;
+
+        public static StockData NewStockData = new StockData();
+
+        public static List<YearPrice> YearPriceList = new List<YearPrice>();
+
+    }
+    public static class StockDataDeserialize
+    {
+        public static string StockName;
+
+        public static string Ticker;
+    }
+
+}
