@@ -1,0 +1,79 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;
+using Newtonsoft.Json;
+using System.Net;
+using AwsomeApplicationUI.Classes;
+using System.Windows.Forms;
+
+namespace AwsomeApplicationUI
+{
+    class Methods
+    {
+        
+        // Loading of Users
+        public static void JsonLoad()
+        {
+            if (!File.Exists("users.save"))
+            {
+                DataManager.UserList = new List<User<string, string, string>>();
+                MessageBox.Show("No file found", "not found");
+                Console.WriteLine("no file");
+            }
+            else
+            {
+                string loading = File.ReadAllText("users.save");
+                DataManager.UserList = JsonConvert.DeserializeObject<List<User<string, string, string>>>(loading);
+                Console.WriteLine(DataManager.UserList[0].username);
+            }
+        }
+        
+        // Saving new users
+        public static void JsonSave()
+        {
+            object saving = JsonConvert.SerializeObject(DataManager.UserList);
+            File.AppendAllText("users.save", saving.ToString());
+        }
+
+        // Saving one year price development
+        public static void JsonYearPrice(List<YearPrice> yr)
+        {
+            var saving = JsonConvert.SerializeObject(yr);
+            File.WriteAllText("52weekprice", saving);
+        }
+  
+        // Loading one year price development
+        public static void JsonYearPriceLoad ()
+        {
+            string data = File.ReadAllText("52weekprice");
+            DataManager.YearPriceList = JsonConvert.DeserializeObject<List<YearPrice>>(data);
+        }
+  
+        // Parsing int from downloaded data for further manipulation
+        public static int Gettingdigits(string data)
+        {
+            int length = 0;
+            int startposition = 0;
+            for (int i = 0; i < data.Length; i++)
+            {
+                if ( char.IsDigit(data[i]))
+                {
+                    startposition = i;
+                    for (int ii = i; ii < data.Length; ii++)
+                    {
+                        if (char.IsDigit(data[ii])) { length++; }
+                        else { break; }
+                    }
+                    break;
+                }
+            }
+            string digits = data.Substring(startposition, length);
+            bool ok = int.TryParse(digits, out int value);
+            return value;
+        }
+
+    }
+}
