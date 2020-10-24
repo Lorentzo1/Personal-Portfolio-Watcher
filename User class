@@ -1,0 +1,26 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.IO;
+using Newtonsoft.Json;
+
+namespace AwsomeApplicationUI
+{
+    public class User<TUsername, TPassword, TDate>
+    {
+        public TUsername username;
+        public TPassword password;
+        public TDate date;
+        public string lastlogin;
+
+
+        public User(TUsername _username, TPassword _password, TDate _date)
+        {
+            username = _username;
+            password = _password;
+            date = _date;
+        }
+    }    
+}
