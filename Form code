@@ -95,15 +95,7 @@ namespace AwsomeApplicationUI
             panelStocks.Visible = false;
             buttonTime.Visible = true;
         }
-        public void NotepadUI()
-        {
-            buttonNotepadEdit.Visible = false; ;
-            panelAddingStock.Visible = false;
-            panelNotepad.Visible = true;
-            panelStocks.Visible = false;
-            panelTime.Visible = false;
 
-        }
         // option to create new account
         public void buttonRegister_Click(object sender, EventArgs e)
         {        
@@ -135,145 +127,11 @@ namespace AwsomeApplicationUI
                     }
                 }
             }
-
-
-        }
-
-        private void buttonEnterNotepad_Click(object sender, EventArgs e)
-        {
-            NotepadUI();
-            if (DataManager.EnteredText2 == null)
-                DataManager.EnteredText2 = new DailyNote();
-            DataManager.EnteredText2.LoadingText();
-            Drawingoldnotes();
-
-
-        }
+          }                    
 
         private void buttonExit_Click(object sender, EventArgs e)
         {
             ExitButtonUI();
-        }
-
-        private void buttonNotepadSave_Click(object sender, EventArgs e)
-        {
-            string newtext = textBoxNotepedNew.Text;
-            string datenow = DateTime.Now.ToString();
-            DataManager.EnteredText2 = new DailyNote(newtext, datenow, null);
-
-
-            DataManager.LoadedText.Add(DataManager.EnteredText2);
-            DataManager.EnteredText2.Save();
-            DataManager.EnteredText2.LoadingText();
-
-        }
-
-
-        public int notepadnum = 0;
-        public int notepadnum2 = 1;
-        public int notepadnum3 = 2;
-        private void buttonNotepadPrewious_Click(object sender, EventArgs e)
-        {
-            notepadnum--;
-            notepadnum2--;
-            notepadnum3--; ;
-            if (notepadnum < 0)
-            {
-                notepadnum = 0;
-                notepadnum2 = 1;
-                notepadnum3 = 2;
-            }
-            Drawingoldnotes();
-        }
-
-        private void buttonNotepadNext_Click(object sender, EventArgs e)
-        {
-            notepadnum++;
-            notepadnum2 = notepadnum + 1;
-            notepadnum3 = notepadnum + 2;
-            if (notepadnum3 > DataManager.LoadedText.Count - 1)
-            {
-                notepadnum = DataManager.LoadedText.Count - 3;
-                notepadnum2 = DataManager.LoadedText.Count - 2;
-                notepadnum3 = DataManager.LoadedText.Count - 1;
-            }
-            Drawingoldnotes();
-        }
-        public void Drawingoldnotes()
-        {
-            string oldest = DataManager.LoadedText[notepadnum].Date;
-            char[] fewlines = DataManager.LoadedText[notepadnum].Text.ToCharArray(0, 5);
-            string fewlinesstring = new string(fewlines);
-            richTextBoxNotepadOldest.Text = oldest + " " + "-" + fewlinesstring;
-            if (DataManager.LoadedText.Count > 1)
-            {
-                string oldest2 = DataManager.LoadedText[notepadnum2].Date;
-                char[] fewlines2 = DataManager.LoadedText[notepadnum2].Text.ToCharArray(0, 5);
-                string fewlinesstring2 = new string(fewlines2);
-                richTextBoxNotepadOlder.Text = oldest2 + " " + "-" + fewlinesstring2;
-            }
-
-            if (DataManager.LoadedText.Count > 2)
-            {
-                string oldest3 = DataManager.LoadedText[notepadnum3].Date;
-                char[] fewlines3 = DataManager.LoadedText[notepadnum3].Text.ToCharArray(0, 5);
-                string fewlinesstring3 = new string(fewlines3);
-                richTextBoxNotepadOld.Text = oldest3 + " " + "-" + fewlinesstring3;
-
-            }
-
-        }
-        public DailyNote currentnote;
-        private void richTextBoxNotepadOldest_Click(object sender, EventArgs e)
-        {
-            currentnote = DataManager.LoadedText[notepadnum];
-            textBoxNotepedNew.Clear();
-            textBoxNotepedNew.Text = currentnote.Text;
-            buttonNotepadEdit.Visible = true;
-            ShowingEdits(currentnote, textBoxNotepedNew);
-        }
-
-        private void richTextBoxNotepadOlder_Click(object sender, EventArgs e)
-        {
-            currentnote = DataManager.LoadedText[notepadnum2];
-            textBoxNotepedNew.Clear();
-            textBoxNotepedNew.Text = currentnote.Text;
-            buttonNotepadEdit.Visible = true;
-            ShowingEdits(currentnote, textBoxNotepedNew);
-        }
-
-        private void richTextBoxNotepadOld_Click(object sender, EventArgs e)
-        {
-            currentnote = DataManager.LoadedText[notepadnum3];
-            textBoxNotepedNew.Clear();
-            textBoxNotepedNew.Text = currentnote.Text;
-            buttonNotepadEdit.Visible = true;
-            ShowingEdits(currentnote, textBoxNotepedNew);
-
-        }
-
-        private void buttonNotepadEdit_Click(object sender, EventArgs e)
-        {
-            EditingNote(currentnote);
-        }
-        public void EditingNote(DailyNote note)
-        {
-            string newedit = textBoxNotepedNew.Text;
-            note.Edit = note.Edit + ";" + newedit;
-            Methods.SavingEdits(note);
-        }
-
-        private void ShowingEdits(DailyNote edit, TextBox window)
-        {
-            if (edit.Edit != null)
-            {
-                string[] edittext = edit.Edit.Split(';');
-                for (int i = 0; i < edittext.Length; i++)
-                {
-                    window.AppendText("  " + Environment.NewLine + "edit" + (i + 1) + " " + edittext[i]);
-                }
-            }
-
         }
 
         public void buttonEnterStocks_Click(object sender, EventArgs e)
